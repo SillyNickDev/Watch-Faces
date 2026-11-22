@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Sable — Galaxy Watch 6 watch face (Watch Face Format v2)
+  Canvas: 480 x 480 (scaled automatically to the device)
+  Palette: black #000000, white #FFFFFF, rust #D07A3A, tan #E8C9A0
+-->
+<WatchFace width="480" height="480" clipShape="CIRCLE">
+  <Metadata key="CLOCK_TYPE" value="DIGITAL" />
+  <Metadata key="PREVIEW_TIME" value="14:37:00" />
+
+  <Scene backgroundColor="#FF000000">
+
+    <!-- ============ Seconds: rust sweep spinning smoothly from the centre ============
+         A pre-rendered, dithered conic gradient used as a second hand. Its bright edge points
+         at the current second and fades out behind it. SYNC_TO_DEVICE = as smooth as the
+         watch allows. Hidden in always-on. -->
+    <AnalogClock x="0" y="0" width="480" height="480">
+      <Variant mode="AMBIENT" target="alpha" value="0" />
+      <SecondHand resource="seconds_sweep" x="0" y="0" width="480" height="480" pivotX="0.5" pivotY="0.5">
+        <Sweep frequency="SYNC_TO_DEVICE" />
+      </SecondHand>
+    </AnalogClock>
+
+    <!-- ============ Ring: steps (right), heart rate (left), battery (top) ============ -->
+    <Group name="ring" x="0" y="0" width="480" height="480">
+      <Variant mode="AMBIENT" target="alpha" value="0" />
+
+      <!-- Steps: track + progress, 20° → 160° clockwise -->
+      <PartDraw name="stepsTrack" x="0" y="0" width="480" height="480">
+        <Arc centerX="240" centerY="240" width="452" height="452" startAngle="20" endAngle="160">
+          <Stroke color="#2ED07A3A" thickness="10" cap="ROUND" />
+        </Arc>
+      </PartDraw>
+      <PartDraw name="stepsProgress" x="0" y="0" width="480" height="480">
+        <Arc centerX="240" centerY="240" width="452" height="452" startAngle="20" endAngle="20">
+          <Transform target="endAngle" value="20 + 140 * clamp([STEP_PERCENT], 0, 100) / 100" />
+          <Stroke color="#FFD07A3A" thickness="10" cap="ROUND" />
+        </Arc>
+      </PartDraw>
+
+      <!-- Heart rate: track + level, grows down from the top-left (340° → 200°) -->
+      <PartDraw name="hrTrack" x="0" y="0" width="480" height="480">
+        <Arc centerX="240" centerY="240" width="452" height="452" startAngle="200" endAngle="340">
+          <Stroke color="#24FFFFFF" thickness="10" cap="ROUND" />
+        </Arc>
+      </PartDraw>
+      <PartDraw name="hrLevel" x="0" y="0" width="480" height="480">
+        <Arc centerX="240" centerY="240" width="452" height="452" startAngle="340" endAngle="340">
+          <!-- 40 bpm = empty, 180 bpm = full -->
+          <Transform target="startAngle" value="340 - 140 * clamp(([HEART_RATE] - 40) / 140, 0, 1)" />
+          <Stroke color="#E6FFFFFF" thickness="10" cap="ROUND" />
+        </Arc>
+      </PartDraw>
+    </Group>
+
+    <!-- Battery bar sits in the gap at the top of the ring (347° → 13°).
+         Stays visible (dimmed) in always-on. Turns red at 15% or below. -->
+    <PartDraw name="batteryTrack" x="0" y="0" width="480" height="480">
+      <Variant mode="AMBIENT" target="alpha" value="120" />
+      <Arc centerX="240" centerY="240" width="452" height="452" startAngle="347" endAngle="373">
+        <Stroke color="#2EE8C9A0" thickness="10" cap="ROUND" />
+      </Arc>
+    </PartDraw>
+    <Condition>
+      <Expressions>
+        <Expression name="batteryLow"><![CDATA[[BATTERY_PERCENT] <= 15]]></Expression>
+      </Expressions>
+      <Compare expression="batteryLow">
+        <PartDraw name="batteryLevelLow" x="0" y="0" width="480" height="480">
+          <Variant mode="AMBIENT" target="alpha" value="170" />
+          <Arc centerX="240" centerY="240" width="452" height="452" startAngle="347" endAngle="347">
+            <Transform target="endAngle" value="347 + 26 * clamp([BATTERY_PERCENT], 0, 100) / 100" />
+            <Stroke color="#FFFF5A4E" thickness="10" cap="ROUND" />
+          </Arc>
+        </PartDraw>
+      </Compare>
+      <Default>
+        <PartDraw name="batteryLevel" x="0" y="0" width="480" height="480">
+          <Variant mode="AMBIENT" target="alpha" value="150" />
+          <Arc centerX="240" centerY="240" width="452" height="452" startAngle="347" endAngle="347">
+            <Transform target="endAngle" value="347 + 26 * clamp([BATTERY_PERCENT], 0, 100) / 100" />
+            <Stroke color="#FFE8C9A0" thickness="10" cap="ROUND" />
+          </Arc>
+        </PartDraw>
+      </Default>
+    </Condition>
+
+    <!-- ============ Battery % — curved along the top ============
+         Clockwise text sits on the outside of its circle: baseline radius ~177 puts the
+         glyphs between r≈177 and r≈191, clear of the ring. -->
+    <PartText name="batteryPercentCurved" x="0" y="0" width="480" height="480">
+      <Variant mode="AMBIENT" target="alpha" value="0" />
+      <TextCircular centerX="240" centerY="240" width="354" height="354"
+                    startAngle="-40" endAngle="40" direction="CLOCKWISE" align="CENTER">
+        <Font family="space_grotesk_medium" size="19" color="#FFE8C9A0">
+          <Template>%s%%<Parameter expression="[BATTERY_PERCENT]" /></Template>
+        </Font>
+      </TextCircular>
+    </PartText>
+
+    <!-- ============ Weather + date — curved along the bottom, reading upright ============
+         Counter-clockwise text sits on the inside of its circle: baseline radius ~185 puts
+         the glyphs between r≈171 and r≈185.
+         Note: One UI's Now Bar can cover this line while it's showing. -->
+    <Group name="bottomInfo" x="0" y="0" width="480" height="480">
+      <Variant mode="AMBIENT" target="alpha" value="0" />
+      <Condition>
+        <Expressions>
+          <Expression name="hasWeather"><![CDATA[[WEATHER.IS_AVAILABLE] == true && [WEATHER.IS_ERROR] == false]]></Expression>
+        </Expressions>
+        <Compare expression="hasWeather">
+          <PartText name="weatherDateCurved" x="0" y="0" width="480" height="480">
+            <TextCircular centerX="240" centerY="240" width="370" height="370"
+                          startAngle="230" endAngle="130" direction="COUNTER_CLOCKWISE" align="CENTER">
+              <Font family="space_grotesk_medium" size="19" color="#CCFFFFFF">
+                <InlineImage resource="ic_weather" width="20" height="20" color="#FFFFFFFF" />
+                <Upper>
+                  <Template>  %s° · %s %s<Parameter expression="[WEATHER.TEMPERATURE]" /><Parameter expression="[DAY_OF_WEEK_S]" /><Parameter expression="[DAY]" /></Template>
+                </Upper>
+              </Font>
+            </TextCircular>
+          </PartText>
+        </Compare>
+        <Default>
+          <PartText name="dateCurved" x="0" y="0" width="480" height="480">
+            <TextCircular centerX="240" centerY="240" width="370" height="370"
+                          startAngle="230" endAngle="130" direction="COUNTER_CLOCKWISE" align="CENTER">
+              <Font family="space_grotesk_medium" size="19" color="#CCFFFFFF">
+                <Upper>
+                  <Template>%s %s<Parameter expression="[DAY_OF_WEEK_S]" /><Parameter expression="[DAY]" /></Template>
+                </Upper>
+              </Font>
+            </TextCircular>
+          </PartText>
+        </Default>
+      </Condition>
+    </Group>
+
+    <!-- ============ Time: stacked hours over minutes ============
+         Right-aligned to x=322 so the colon keeps the same gap whatever the digits
+         (Space Grotesk digits vary in width, e.g. "03" is much wider than "11"). -->
+    <DigitalClock x="0" y="104" width="480" height="150">
+      <Variant mode="AMBIENT" target="alpha" value="200" />
+      <TimeText format="hh" hourFormat="24" align="END" x="0" y="0" width="322" height="150">
+        <Font family="space_grotesk_bold" size="150" color="#FFFFFFFF" />
+      </TimeText>
+    </DigitalClock>
+
+    <DigitalClock x="0" y="226" width="480" height="150">
+      <Variant mode="AMBIENT" target="alpha" value="170" />
+      <TimeText format="mm" align="END" x="0" y="0" width="322" height="150">
+        <Font family="space_grotesk_bold" size="150" color="#FFD07A3A" />
+      </TimeText>
+    </DigitalClock>
+
+    <!-- ============ Colon: soft breathing once per second ============ -->
+    <!-- Outer group hides the animated colon in always-on -->
+    <Group name="colonActive" x="331" y="142" width="15" height="64">
+      <Variant mode="AMBIENT" target="alpha" value="0" />
+      <Group name="colonBreathing" x="0" y="0" width="15" height="64">
+        <!-- t = 1 on the second, 0 at the half-second; smoothstep(t) for a soft in/out.
+             Opacity glides between 20% and 100%. -->
+        <Transform target="alpha"
+                   value="51 + 204 * pow(abs([MILLISECOND] - 500) / 500, 2) * (3 - 2 * abs([MILLISECOND] - 500) / 500)" />
+        <PartDraw name="colonTop" x="0" y="0" width="15" height="15">
+          <Ellipse x="0" y="0" width="15" height="15"><Fill color="#FFD07A3A" /></Ellipse>
+        </PartDraw>
+        <PartDraw name="colonBottom" x="0" y="49" width="15" height="15">
+          <Ellipse x="0" y="0" width="15" height="15"><Fill color="#FFD07A3A" /></Ellipse>
+        </PartDraw>
+      </Group>
+    </Group>
+    <!-- Static, dimmer colon shown only in always-on -->
+    <Group name="colonAmbient" x="331" y="142" width="15" height="64" alpha="0">
+      <Variant mode="AMBIENT" target="alpha" value="170" />
+      <PartDraw name="colonTopAmbient" x="0" y="0" width="15" height="15">
+        <Ellipse x="0" y="0" width="15" height="15"><Fill color="#FFD07A3A" /></Ellipse>
+      </PartDraw>
+      <PartDraw name="colonBottomAmbient" x="0" y="49" width="15" height="15">
+        <Ellipse x="0" y="0" width="15" height="15"><Fill color="#FFD07A3A" /></Ellipse>
+      </PartDraw>
+    </Group>
+
+    <!-- ============ Left: heart rate ============ -->
+    <Group name="heartRate" x="46" y="194" width="70" height="92">
+      <Variant mode="AMBIENT" target="alpha" value="0" />
+      <!-- Heart icon pops once per beat at your live heart rate -->
+      <PartImage name="heartIcon" x="21" y="0" width="28" height="28" pivotX="0.5" pivotY="0.5">
+        <Transform target="scaleX" value="1 + 0.22 * clamp(1 - fract([SECOND_MILLISECOND] * clamp([HEART_RATE], 40, 200) / 60) * 4, 0, 1)" />
+        <Transform target="scaleY" value="1 + 0.22 * clamp(1 - fract([SECOND_MILLISECOND] * clamp([HEART_RATE], 40, 200) / 60) * 4, 0, 1)" />
+        <Image resource="ic_heart" />
+      </PartImage>
+      <PartText name="hrValue" x="0" y="30" width="70" height="40">
+        <Text align="CENTER">
+          <Font family="outfit_bold" size="30" color="#FFFFFFFF">
+            <Template>%s<Parameter expression="[HEART_RATE]" /></Template>
+          </Font>
+        </Text>
+      </PartText>
+      <PartText name="hrLabel" x="0" y="72" width="70" height="20">
+        <Text align="CENTER">
+          <Font family="outfit_medium" size="14" color="#8CFFFFFF" letterSpacing="0.12">BPM</Font>
+        </Text>
+      </PartText>
+    </Group>
+
+    <!-- ============ Right: steps ============ -->
+    <Group name="steps" x="364" y="194" width="70" height="92">
+      <Variant mode="AMBIENT" target="alpha" value="0" />
+      <PartImage name="stepsIcon" x="21" y="0" width="28" height="28">
+        <Image resource="ic_steps" />
+      </PartImage>
+      <Condition>
+        <Expressions>
+          <Expression name="thousands"><![CDATA[[STEP_COUNT] >= 1000]]></Expression>
+        </Expressions>
+        <Compare expression="thousands">
+          <PartText name="stepsValueK" x="0" y="30" width="70" height="40">
+            <Text align="CENTER">
+              <Font family="outfit_bold" size="30" color="#FFD07A3A">
+                <Template>%sk<Parameter expression="floor([STEP_COUNT] / 100) / 10" /></Template>
+              </Font>
+            </Text>
+          </PartText>
+        </Compare>
+        <Default>
+          <PartText name="stepsValue" x="0" y="30" width="70" height="40">
+            <Text align="CENTER">
+              <Font family="outfit_bold" size="30" color="#FFD07A3A">
+                <Template>%s<Parameter expression="[STEP_COUNT]" /></Template>
+              </Font>
+            </Text>
+          </PartText>
+        </Default>
+      </Condition>
+      <PartText name="stepsLabel" x="0" y="72" width="70" height="20">
+        <Text align="CENTER">
+          <Font family="outfit_medium" size="14" color="#8CFFFFFF" letterSpacing="0.12">STEPS</Font>
+        </Text>
+      </PartText>
+    </Group>
+
+    <!-- Weather/date curve along the bottom; One UI's Now Bar may overlap it when active. -->
+  </Scene>
+</WatchFace>
